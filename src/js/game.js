@@ -73,6 +73,61 @@ function canMove( grid, x, y, dir, actor ) {
   return !isWall( grid, tx, ty, actor );
 }
 
+function ghostNeighbors( grid, x, y ) {
+  const width = grid[ 0 ].length;
+  const neighbors = [];
+
+  for ( const [ dir, delta ] of Object.entries( DIRS ) ) {
+    if ( !canMove( grid, x, y, dir, 'ghost' ) ) continue;
+
+    let nx = x + delta.x;
+    const ny = y + delta.y;
+    if ( ny === TUNNEL_ROW ) {
+      if ( nx < 0 ) nx = width - 1;
+      else if ( nx >= width ) nx = 0;
+    }
+    neighbors.push( { x: nx, y: ny, dir } );
+  }
+
+  return neighbors;
+}
+
+function shortestGhostRoute( grid, start, target ) {
+  const startX = Math.round( start.x );
+  const startY = Math.round( start.y );
+  const targetX = Math.round( target.x );
+  const targetY = Math.round( target.y );
+  const startKey = startX + ',' + startY;
+  const visited = new Set( [ startKey ] );
+  const queue = [ {
+    x: startX,
+    y: startY,
+    distance: 0,
+    firstDir: null,
+  } ];
+
+  for ( let head = 0; head < queue.length; head++ ) {
+    const current = queue[ head ];
+    if ( current.x === targetX && current.y === targetY ) {
+      return { direction: current.firstDir, distance: current.distance };
+    }
+
+    for ( const next of ghostNeighbors( grid, current.x, current.y ) ) {
+      const key = next.x + ',' + next.y;
+      if ( visited.has( key ) ) continue;
+      visited.add( key );
+      queue.push( {
+        x: next.x,
+        y: next.y,
+        distance: current.distance + 1,
+        firstDir: current.firstDir || next.dir,
+      } );
+    }
+  }
+
+  return null;
+}
+
 function wrapTunnel( a, width ) {
   if ( Math.round( a.y ) === TUNNEL_ROW ) {
     if ( a.x < 0 ) a.x += width;
@@ -110,35 +165,66 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
-function decideGhost( game, g ) {
-  const grid = game.grid;
-  const p = game.pacman;
+function projectedPacmanTarget( pacman, distance ) {
+  const direction = DIRS[ pacman.dir ] || { x: 0, y: 0 };
+  return {
+    x: Math.round( pacman.x ) + direction.x * distance,
+    y: Math.round( pacman.y ) + direction.y * distance,
+  };
+}
 
-  const options = Object.keys( DIRS ).filter(
-    ( dir ) => dir !== OPPOSITE[ g.dir ] && canMove( grid, g.x, g.y, dir, 'ghost' )
-  );
-  // Sin salida (callejon): permitir el giro de 180.
-  const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
+function resolveGhostTarget( grid, target ) {
+  const targetX = Math.round( target.x );
+  const targetY = Math.round( target.y );
+  if ( !isWall( grid, targetX, targetY, 'ghost' ) ) {
+    return { x: targetX, y: targetY };
+  }
 
-  if ( g.kind === 'hunter' ) {
-    const px = Math.round( p.x );
-    const py = Math.round( p.y );
-    let best = choices[ 0 ];
-    let bestDist = Infinity;
-    for ( const dir of choices ) {
-      const d = DIRS[ dir ];
-      const nx = g.x + d.x;
-      const ny = g.y + d.y;
-      const dist = Math.abs( nx - px ) + Math.abs( ny - py );
-      if ( dist < bestDist ) {
-        bestDist = dist;
-        best = dir;
+  let nearest = null;
+  let nearestDistance = Infinity;
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( isWall( grid, x, y, 'ghost' ) ) continue;
+      const distance = Math.abs( x - targetX ) + Math.abs( y - targetY );
+      if ( distance < nearestDistance ) {
+        nearest = { x, y };
+        nearestDistance = distance;
       }
     }
-    g.dir = best;
-  } else {
-    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
   }
+
+  return nearest;
+}
+
+function getGhostTarget( game, g ) {
+  const pacmanTarget = { x: Math.round( game.pacman.x ), y: Math.round( game.pacman.y ) };
+
+  if ( g.kind === 'ambusher' ) {
+    return projectedPacmanTarget( game.pacman, 4 );
+  }
+
+  if ( g.kind === 'vector' ) {
+    const ahead = projectedPacmanTarget( game.pacman, 2 );
+    const red = game.ghosts[ 0 ];
+    return {
+      x: ahead.x * 2 - Math.round( red.x ),
+      y: ahead.y * 2 - Math.round( red.y ),
+    };
+  }
+
+  if ( g.kind === 'shy' ) {
+    const route = shortestGhostRoute( game.grid, g, pacmanTarget );
+    if ( route && route.distance <= 8 ) return { x: 1, y: 29 };
+  }
+
+  return pacmanTarget;
+}
+
+function decideGhost( game, g ) {
+  const grid = game.grid;
+  const target = resolveGhostTarget( grid, getGhostTarget( game, g ) );
+  const route = target && shortestGhostRoute( grid, g, target );
+  if ( route && route.direction ) g.dir = route.direction;
 }
 
 function moveGhost( game, g ) {
