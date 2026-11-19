@@ -1,6 +1,6 @@
 # SPEC 01 — Conductas de cuatro fantasmas
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** Ninguna
 > **Fecha:** 2026-11-18
 > **Objetivo:** Añadir cuatro fantasmas con conductas de persecución distintas, incluyendo uno que persigue agresivamente a Pac-Man por la ruta más corta.
@@ -45,16 +45,16 @@ const GHOST_STARTS = [
 
 ## Criterios de aceptación
 
-- [ ] Al iniciar una partida aparecen exactamente cuatro fantasmas, diferenciados por los colores rojo, celeste, rosa y naranja.
-- [ ] Los fantasmas comienzan en las posiciones `(12,14)`, `(13,14)`, `(14,14)` y `(15,14)`, respectivamente.
-- [ ] El rojo selecciona una ruta válida más corta hacia la posición de Pac-Man y mantiene la velocidad actual de los fantasmas.
-- [ ] El rosa calcula su objetivo cuatro casillas delante de la dirección actual de Pac-Man.
-- [ ] El celeste calcula su objetivo reflejando y duplicando el vector desde la posición del rojo hasta un punto dos casillas delante de Pac-Man.
-- [ ] El naranja persigue a Pac-Man si la distancia de ruta más corta es mayor que ocho casillas; con una distancia de ocho o menos, se dirige a la casilla transitable inferior izquierda `(1,29)`.
-- [ ] Si un objetivo calculado cae en una pared o fuera del laberinto, el fantasma se dirige a la casilla transitable más cercana a ese objetivo.
-- [ ] Las rutas no atraviesan paredes, permiten cruzar la puerta de la casa y consideran el túnel como conexión entre ambos extremos.
-- [ ] Al colisionar con un fantasma, se pierde una vida y se reinician las posiciones y direcciones de Pac-Man y los cuatro fantasmas según las reglas actuales.
-- [ ] La partida puede iniciarse, perderse y reiniciarse en el navegador sin errores en la consola.
+- [x] Al iniciar una partida aparecen exactamente cuatro fantasmas, diferenciados por los colores rojo, celeste, rosa y naranja.
+- [x] Los fantasmas comienzan en las posiciones `(12,14)`, `(13,14)`, `(14,14)` y `(15,14)`, respectivamente.
+- [x] El rojo selecciona una ruta válida más corta hacia la posición de Pac-Man y mantiene la velocidad actual de los fantasmas.
+- [x] El rosa calcula su objetivo cuatro casillas delante de la dirección actual de Pac-Man.
+- [x] El celeste calcula su objetivo reflejando y duplicando el vector desde la posición del rojo hasta un punto dos casillas delante de Pac-Man.
+- [x] El naranja persigue a Pac-Man si la distancia de ruta más corta es mayor que ocho casillas; con una distancia de ocho o menos, se dirige a la casilla transitable inferior izquierda `(1,29)`.
+- [x] Si un objetivo calculado cae en una pared o fuera del laberinto, el fantasma se dirige a la casilla transitable más cercana a ese objetivo.
+- [x] Las rutas no atraviesan paredes, permiten cruzar la puerta de la casa y consideran el túnel como conexión entre ambos extremos.
+- [x] Al colisionar con un fantasma, se pierde una vida y se reinician las posiciones y direcciones de Pac-Man y los cuatro fantasmas según las reglas actuales.
+- [x] La partida puede iniciarse, perderse y reiniciarse en el navegador sin errores en la consola.
 
 ## Decisiones
 
