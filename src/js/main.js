@@ -39,10 +39,10 @@ function startGame() {
 
 if ( actionBtn ) actionBtn.addEventListener( 'click', startGame );
 
-function loop() {
+function loop( timestamp ) {
   frame++;
   if ( game.state === 'playing' ) {
-    update( game );
+    update( game, timestamp );
     if ( game.state === 'won' ) showOverlay( 'GANASTE', 'win', 'Reiniciar' );
     else if ( game.state === 'lost' ) showOverlay( 'PERDISTE', 'lose', 'Reiniciar' );
   }
