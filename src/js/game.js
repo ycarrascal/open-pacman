@@ -12,6 +12,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
+const GHOST_RELEASE_INTERVAL = 1500;
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
@@ -36,14 +37,47 @@ function createGame() {
       nextDir: null,
       speed: PACMAN_SPEED,
     },
-    ghosts: GHOST_STARTS.map( ( g ) => ( {
+    ghosts: GHOST_STARTS.map( ( g, i ) => ( {
       x: g.x,
       y: g.y,
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      released: i === 0,
     } ) ),
+    ghostRelease: {
+      nextIndex: 1,
+      nextAt: null,
+    },
   };
+}
+
+function resetGhostRelease( game, startTime ) {
+  game.ghosts.forEach( ( g, i ) => {
+    g.released = i === 0;
+  } );
+  game.ghostRelease = {
+    nextIndex: 1,
+    nextAt: startTime + GHOST_RELEASE_INTERVAL,
+  };
+}
+
+function updateGhostRelease( game, timestamp ) {
+  const release = game.ghostRelease;
+  if ( release.nextIndex >= game.ghosts.length ) return;
+
+  // La primera actualización de una partida establece el origen del reloj.
+  if ( release.nextAt === null ) {
+    release.nextAt = timestamp + GHOST_RELEASE_INTERVAL;
+    return;
+  }
+  if ( timestamp < release.nextAt ) return;
+
+  // Liberar solo uno por actualización. El siguiente intervalo comienza
+  // desde la salida efectiva, aunque el navegador haya retrasado un frame.
+  game.ghosts[ release.nextIndex ].released = true;
+  release.nextIndex++;
+  release.nextAt = timestamp + GHOST_RELEASE_INTERVAL;
 }
 
 function aligned( v ) {
@@ -228,6 +262,8 @@ function decideGhost( game, g ) {
 }
 
 function moveGhost( game, g ) {
+  if ( !g.released ) return;
+
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -244,7 +280,7 @@ function moveGhost( game, g ) {
   wrapTunnel( g, width );
 }
 
-function resetPositions( game ) {
+function resetPositions( game, timestamp ) {
   const p = game.pacman;
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
@@ -255,24 +291,29 @@ function resetPositions( game ) {
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
   } );
+  resetGhostRelease( game, timestamp );
 }
 
 function collides( a, b ) {
   return Math.abs( a.x - b.x ) < 0.5 && Math.abs( a.y - b.y ) < 0.5;
 }
 
-function update( game ) {
+function update( game, timestamp ) {
+  if ( game.state !== 'playing' ) return;
+
+  updateGhostRelease( game, timestamp );
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   for ( const g of game.ghosts ) {
+    if ( !g.released ) continue;
     if ( collides( game.pacman, g ) ) {
       game.lives--;
       if ( game.lives <= 0 ) {
         game.state = 'lost';
         return;
       }
-      resetPositions( game );
+      resetPositions( game, timestamp );
       break;
     }
   }
